@@ -250,6 +250,7 @@ jobs:
             arm64-v8a)
               # not safe without GC64
               SYSMALLOC=
+              PAGESIZE="-Wl,-z,max-page-size=16384"
               ;;
           esac
 
@@ -290,7 +291,7 @@ jobs:
 
           # zapret2
           CFLAGS="-DZAPRET_GH_VER=${{ github.ref_name }} -DZAPRET_GH_HASH=${{ github.sha }} -I$DEPS_DIR/include $CPU" \
-          LDFLAGS="-L$DEPS_DIR/lib" \
+          LDFLAGS="-L$DEPS_DIR/lib $PAGESIZE" \
           make -C zapret2 LUA_JIT=$LJIT LUA_CFLAGS="$LCFLAGS" LUA_LIB="$LLIB" -j$(nproc) android
 
           # strip unwanted ELF sections to prevent warnings on old Android versions
