@@ -919,7 +919,7 @@ function timer2(name, data)
 end
 function test_timer(opts)
 	timer_set("t1","timer1",500,true,"sample_data");
-	tbl = {n=0}
+	local tbl = {n=0}
 	timer_set("t2","timer2",700,false,tbl);
 end
 
