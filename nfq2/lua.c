@@ -3806,8 +3806,15 @@ static int luacall_timer_set(lua_State *L)
 	lua_pop(L, 1);
 	if (!is_f) luaL_error(L, "timer function '%s' does not exist", func);
 
+	const char *action;
 	timer_pool *timer = TimerPoolSearch(params.timers, name);
-	if (timer) luaL_error(L,"timer '%s' already present", name);
+	if (timer)
+	{
+		TimerPoolDel(&params.timers, timer);
+		action = "replaced";
+	}
+	else
+		action = "created";
 
 	timer = TimerPoolAdd(&params.timers, name, func, period, oneshot);
 	if (!timer) luaL_error(L,"could not create timer");
@@ -3817,7 +3824,7 @@ static int luacall_timer_set(lua_State *L)
 		lua_pushvalue(L, 5);
 		timer->lua_ref = luaL_ref(L, LUA_REGISTRYINDEX);
 	}
-	DLOG("timer: '%s' created. function '%s' period %llu oneshot %u\n", timer->str, timer->func, timer->period, timer->oneshot);
+	DLOG("timer: '%s' %s. function '%s' period %llu oneshot %u\n", timer->str, action, timer->func, timer->period, timer->oneshot);
 
 	LUA_STACK_GUARD_RETURN(L,0)
 }
