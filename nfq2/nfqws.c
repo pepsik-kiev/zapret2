@@ -525,15 +525,23 @@ static int nfq_main(void)
 		if (bQuit) goto quit;
 		for(;;)
 		{
-			FD_ZERO(&fdset);
-			FD_SET(fd, &fdset);
-			res = select(fd+1, &fdset, NULL, NULL, &tv);
-			if (bQuit) goto quit;
-			if (res == -1)
+			if (params.timers)
 			{
-				if (errno == EINTR) continue;
-				DLOG_PERROR("select");
-				goto err;
+				FD_ZERO(&fdset);
+				FD_SET(fd, &fdset);
+				res = select(fd+1, &fdset, NULL, NULL, &tv);
+				if (bQuit) goto quit;
+				if (res == -1)
+				{
+					if (errno == EINTR) continue;
+					DLOG_PERROR("select");
+					goto err;
+				}
+			}
+			else
+			{
+				if (bQuit) goto quit;
+				res = 1;
 			}
 			lua_do_gc();
 			ReloadCheck();
@@ -555,21 +563,24 @@ static int nfq_main(void)
 				if (res<0) DLOG_ERR("nfq_handle_packet result %d, errno %d : %s\n", res, errno, strerror(errno));
 			}
 
-			bt = boottime_ms();
-			dbt = bt-bt_prev;
-			if (dbt>=params.timer_res)
+			if (params.timers)
 			{
-				TimerPoolRun(&params.timers, bt);
+				bt = boottime_ms();
+				dbt = bt-bt_prev;
+				if (dbt>=params.timer_res)
+				{
+					TimerPoolRun(&params.timers, bt);
 
-				bt_prev = bt;
-				tv.tv_sec = params.timer_res/1000;
-				tv.tv_usec = params.timer_res%1000*1000;
-			}
-			else
-			{
-				dbt = params.timer_res-dbt;
-				tv.tv_sec = (time_t)(dbt/1000);
-				tv.tv_usec = (suseconds_t)(dbt%1000*1000);
+					bt_prev = bt;
+					tv.tv_sec = params.timer_res/1000;
+					tv.tv_usec = params.timer_res%1000*1000;
+				}
+				else
+				{
+					dbt = params.timer_res-dbt;
+					tv.tv_sec = (time_t)(dbt/1000);
+					tv.tv_usec = (suseconds_t)(dbt%1000*1000);
+				}
 			}
 		}
 		if (errno==EINTR)
@@ -712,7 +723,7 @@ static int dvt_main(void)
 		}
 		FD_ZERO(&fdset);
 		for (i = 0; i < fdct; i++) FD_SET(fd[i], &fdset);
-		r = select(fdmax, &fdset, NULL, NULL, &tv);
+		r = select(fdmax, &fdset, NULL, NULL, params.timers ? &tv : NULL);
 		if (bQuit)
 		{
 			DLOG_CONDUP("quit requested\n");
@@ -796,21 +807,24 @@ static int dvt_main(void)
 				}
 			}
 		}
-		bt = boottime_ms();
-		dbt = bt-bt_prev;
-		if (dbt>=params.timer_res)
+		if (params.timers)
 		{
-			TimerPoolRun(&params.timers, bt);
+			bt = boottime_ms();
+			dbt = bt-bt_prev;
+			if (dbt>=params.timer_res)
+			{
+				TimerPoolRun(&params.timers, bt);
 
-			bt_prev = bt;
-			tv.tv_sec = params.timer_res/1000;
-			tv.tv_usec = params.timer_res%1000*1000;
-		}
-		else
-		{
-			dbt = params.timer_res-dbt;
-			tv.tv_sec = (time_t)(dbt/1000);
-			tv.tv_usec = (suseconds_t)(dbt%1000*1000);
+				bt_prev = bt;
+				tv.tv_sec = params.timer_res/1000;
+				tv.tv_usec = params.timer_res%1000*1000;
+			}
+			else
+			{
+				dbt = params.timer_res-dbt;
+				tv.tv_sec = (time_t)(dbt/1000);
+				tv.tv_usec = (suseconds_t)(dbt%1000*1000);
+			}
 		}
 	}
 
