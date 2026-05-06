@@ -11,7 +11,7 @@ typedef struct timer_pool {
 	uint64_t period;
 	bool oneshot;
 	int lua_ref;
-	uint64_t bt_prev;
+	uint64_t bt_next;	/* next activation time */
 	unsigned int n, fires;
 	UT_hash_handle hh;	/* makes this structure hashable */
 } timer_pool;

@@ -50,7 +50,7 @@ struct timer_pool *TimerPoolAdd(timer_pool **pp, const char *str, const char *fu
 	elem->period = period;
 	elem->oneshot = oneshot;
 	elem->lua_ref = LUA_NOREF;
-	elem->bt_prev = boottime_ms();
+	elem->bt_next = boottime_ms() + elem->period;
 	elem->n = ++timer_n;
 	elem->fires = 0;
 	return elem;
@@ -80,14 +80,13 @@ static bool TimerPoolRunTimer(timer_pool *p)
 uint64_t TimerPoolNext(const timer_pool *p, bool *dirty)
 {
 	const timer_pool *elem, *tmp;
-	uint64_t nexttime, mintime=0x7FFFFFFFFFFFFFFF;
+	uint64_t mintime=0x7FFFFFFFFFFFFFFF;
 
 	if (!p) return 0;
 
 	HASH_ITER(hh, p, elem, tmp)
 	{
-		nexttime = elem->bt_prev + elem->period;
-		if (nexttime<mintime) mintime = nexttime;
+		if (elem->bt_next < mintime) mintime = elem->bt_next;
 	}
 	*dirty = false;
 	return mintime;
@@ -101,13 +100,12 @@ uint64_t TimerPoolRun(timer_pool **pp, bool *dirty, uint64_t bt)
 	char *name;
 	const char *del;
 	unsigned int n;
-	uint64_t nexttime, mintime=0x7FFFFFFFFFFFFFFF;
+	uint64_t mintime=0x7FFFFFFFFFFFFFFF;
 
 	if (!bt) bt = boottime_ms();
 	HASH_ITER(hh, *pp, elem, tmp)
 	{
-		nexttime = elem->bt_prev + elem->period;
-		if (bt >= nexttime)
+		if (bt >= elem->bt_next)
 		{
 			if (!(name = strdup(elem->str)))
 				return 0;
@@ -132,8 +130,10 @@ uint64_t TimerPoolRun(timer_pool **pp, bool *dirty, uint64_t bt)
 				}
 				else
 				{
-					elem->bt_prev = bt;
-					nexttime = elem->bt_prev + elem->period;
+					// in case process was freezed (--ssid-filter/nlm-filter stop in winws for example)
+					// do not use previous activation time or timer can hit multiple times
+					// use current time instead to prevent bulk activation
+					elem->bt_next = bt + elem->period;
 				}
 			}
 
@@ -141,7 +141,7 @@ uint64_t TimerPoolRun(timer_pool **pp, bool *dirty, uint64_t bt)
 		}
 		if (elem)
 		{
-			if (nexttime<mintime) mintime = nexttime;
+			if (elem->bt_next < mintime) mintime = elem->bt_next;
 		}
 	}
 	if (!*pp) return 0; // no timers
