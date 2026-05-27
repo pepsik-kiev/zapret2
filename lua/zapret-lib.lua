@@ -1250,7 +1250,9 @@ function rawsend_dissect_segmented(desync, dis, mss, options)
 				len = #payload - pos + 1
 				if len > max_data then len = max_data end
 				if oob then
-					if urp>=pos and urp<(pos+len)then
+					if urp==0 and pos==1 then
+						discopy.tcp.th_flags = bitor(discopy.tcp.th_flags, TH_URG)
+					elseif urp>=pos and urp<(pos+len) then
 						discopy.tcp.th_flags = bitor(discopy.tcp.th_flags, TH_URG)
 						discopy.tcp.th_urp = urp-pos+1
 					else
