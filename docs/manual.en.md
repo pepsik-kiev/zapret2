@@ -3789,7 +3789,9 @@ function send(ctx, desync)
 - Default `ip_id` mode is `none`.
 
 Sends the current dissect with optional modifications applied.
-If delay is specified function returns VERDICT_DROP. Packet data and send options are remembered. After specified time packet is sent out.
+If delay is specified packet data and send options are remembered. After specified time packet is sent out.
+
+The function returns VERDICT_PASS - the sending of the current dissect is not canceled. If you want to cancel, use the [drop](#drop) instance.
 
 
 ### pktmod
