@@ -103,10 +103,11 @@ uint64_t TimerPoolRun(timer_pool **pp, bool *dirty, uint64_t bt)
 	char *name;
 	const char *del;
 	unsigned int n;
+	uint64_t mintime;
 
 	if (!bt) bt = boottime_ms();
 again:
-	uint64_t mintime=0x7FFFFFFFFFFFFFFF;
+	mintime=0x7FFFFFFFFFFFFFFF;
 	*dirty = false;
 	HASH_ITER(hh, *pp, elem, tmp)
 	{
